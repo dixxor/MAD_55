@@ -1,70 +1,94 @@
 import 'package:first/home.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-void main() {
-  runApp(pet1());
-}
+class PostDetailsPage extends StatelessWidget {
+  final Map<String, dynamic> postData;
 
-class pet1 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: PetDetailPage(
-        petName: 'Winky',
-        petCategory: 'Dog',
-        petLocation: 'Moratuw',
-        petImage: 'assets/1 (2).jpg',
-        petGender: 'Male',
-        petAge: '1 year',
-        petBreed: 'Labrador',
-        userName: 'Dinoda rathnayake',
-        userMobile: '0783914902',
-        petDescription:
-            'Meet Winky, the bundle of joy waiting for a loving home! Winky is an affectionate and energetic dog who thrives on love and companionship. His favorite activities include going on long walks, playing fetch, and spending quality time with his human friends. With his playful nature and friendly demeanor, Winky is sure to bring endless joy and laughter to any family. If youre ready to open your heart and home to a furry friend, Winky is eagerly waiting to become a part of your life!.',
-      ),
-    );
+  const PostDetailsPage({Key? key, required this.postData}) : super(key: key);
+
+  Future<void> deletePost(String? postId, BuildContext context) async {
+    print('Deleting post with ID: $postId');
+    try {
+      // Check if postId is not null and is a non-empty string
+      if (postId != null && postId.isNotEmpty) {
+        // Delete the document with the specified postId
+        await FirebaseFirestore.instance
+            .collection('posts')
+            .doc(postId) // Use postId directly here
+            .delete();
+
+        // Show a success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Post deleted successfully')),
+        );
+
+        // Navigate back to the home page after deletion
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage()),
+        ); // Go back to the home page
+      } else {
+        // postId is null or empty, show an error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Invalid post ID')),
+        );
+      }
+    } catch (e) {
+      // Error occurred during deletion, show an error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete post: $e')),
+      );
+    }
   }
-}
-
-class PetDetailPage extends StatelessWidget {
-  final String petName;
-  final String petCategory;
-  final String petLocation;
-  final String petImage;
-  final String petGender;
-  final String petAge;
-  final String petBreed;
-  final String userName;
-  final String userMobile;
-  final String petDescription;
-
-  // Constructor to receive pet details
-  PetDetailPage({
-    required this.petName,
-    required this.petCategory,
-    required this.petLocation,
-    required this.petImage,
-    required this.petGender,
-    required this.petAge,
-    required this.petBreed,
-    required this.userName,
-    required this.userMobile,
-    required this.petDescription,
-  });
 
   @override
   Widget build(BuildContext context) {
+    print('Post Data: $postData');
+    String postId = postData['postId'] ?? '';
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Pet Details'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.push(
-                context, MaterialPageRoute(builder: (context) => HomePage()));
+            Navigator.pop(context);
           },
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Delete Post'),
+                    content: Text('Are you sure you want to delete this post?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Close the dialog
+                          deletePost(postId, context);
+
+                          deletePost(postData['postId'], context);
+                        },
+                        child: Text('Delete'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -77,7 +101,7 @@ class PetDetailPage extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10.0),
                 image: DecorationImage(
-                  image: AssetImage(petImage),
+                  image: NetworkImage(postData['imageUrl'] ?? ''),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -87,14 +111,14 @@ class PetDetailPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  petName,
+                  'Pet Name: ${postData['petName'] ?? 'Not specified'}',
                   style: const TextStyle(
                     fontSize: 28.0,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  '($petCategory)',
+                  '(${postData['category'] ?? 'Not specified'})',
                   style: const TextStyle(
                     fontSize: 18.0,
                     color: Colors.grey,
@@ -104,7 +128,7 @@ class PetDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 5.0),
             Text(
-              petLocation,
+              'Location: ${postData['city'] ?? 'Not specified'}',
               style: const TextStyle(
                 fontSize: 18.0,
                 color: Colors.grey,
@@ -119,7 +143,7 @@ class PetDetailPage extends StatelessWidget {
                     const Icon(Icons.male,
                         color: Color.fromARGB(188, 98, 0, 255)),
                     const SizedBox(width: 5.0),
-                    Text(petGender,
+                    Text('${postData['gender'] ?? 'Not specified'}',
                         style: const TextStyle(
                             color: Color.fromARGB(255, 0, 0, 0))),
                   ],
@@ -129,7 +153,7 @@ class PetDetailPage extends StatelessWidget {
                     const Icon(Icons.calendar_today,
                         color: Color.fromARGB(188, 98, 0, 255)),
                     const SizedBox(width: 5.0),
-                    Text(petAge,
+                    Text('${postData['age'] ?? 'Not specified'}',
                         style: const TextStyle(
                             color: Color.fromARGB(255, 0, 0, 0))),
                   ],
@@ -139,7 +163,7 @@ class PetDetailPage extends StatelessWidget {
                     const Icon(Icons.pets,
                         color: Color.fromARGB(188, 98, 0, 255)),
                     const SizedBox(width: 5.0),
-                    Text(petBreed,
+                    Text('${postData['breed'] ?? 'Not specified'}',
                         style: const TextStyle(
                             color: Color.fromARGB(255, 0, 0, 0))),
                   ],
@@ -167,7 +191,7 @@ class PetDetailPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 10.0),
                       Text(
-                        'Name: $userName',
+                        'Owner Name: ${postData['ownerName'] ?? 'Not specified'}',
                         style: const TextStyle(
                           fontSize: 18.0,
                           color: Colors.white,
@@ -175,7 +199,23 @@ class PetDetailPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 5.0),
                       Text(
-                        'Mobile: $userMobile',
+                        'Address: ${postData['address'] ?? 'Not specified'}',
+                        style: const TextStyle(
+                          fontSize: 18.0,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 5.0),
+                      Text(
+                        'City: ${postData['city'] ?? 'Not specified'}',
+                        style: const TextStyle(
+                          fontSize: 18.0,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 5.0),
+                      Text(
+                        'Contact Number: ${postData['contactNumber'] ?? 'Not specified'}',
                         style: const TextStyle(
                           fontSize: 18.0,
                           color: Colors.white,
@@ -196,7 +236,7 @@ class PetDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 10.0),
             Text(
-              petDescription,
+              '${postData['description'] ?? 'Not specified'}',
               style: const TextStyle(
                 fontSize: 18.0,
               ),
